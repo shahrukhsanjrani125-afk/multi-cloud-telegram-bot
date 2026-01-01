@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  tor-proxy:
+    image: dperson/torproxy:latest
+    container_name: shark-tor
+    ports:
+      - "9050:9050"
+      - "9051:9051"
+    environment:
+      - TOR_NewCircuitPeriod=15
+      - TOR_DNSPort=53
+    restart: unless-stopped
+
+  openstack-server:
+    build: ./openstack
+    container_name: shark-openstack
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - FLASK_ENV=production
+    depends_on:
+      - tor-proxy
+    restart: unless-stopped
+
+  erp-bot:
+    build: ./bot
+    container_name: shark-erp-bot
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - ADMIN_CHAT_ID=${ADMIN_CHAT_ID}
+    depends_on:
+      - tor-proxy
+      - openstack-server
+    restart: unless-stopped
